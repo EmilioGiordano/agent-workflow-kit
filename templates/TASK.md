@@ -1,8 +1,9 @@
 <!-- TASK template. The orchestrator copies it to <worktree>/TASK-<topic>.md (untracked, never committed) and fills every <...>. Delete lines that do not apply. -->
 # TASK: <type>/<topic>
 
-Branch `<type>/<topic>`, worktree `<worktree-path>`, cut from `main` at `<commit>` (after <PR or branch> merged).
-Profile: `<profile>`. Build slot: `<slot or n/a>`. Port / test DB: `<value or n/a>`.
+Branch `<type>/<topic>`, worktree `<worktree-path>`, cut from `<default-branch>` at `<commit>` (after <PR or branch> merged).
+Profiles: `<profiles>`. Build slot: `<slot | project target-dir | n/a>`. Port / test DB / data dir: `<values or n/a>`.
+Commit format: <commit-format>.
 <Build note, compiled profiles: "Builds only through scripts/build-lock.sh; keep full builds few.">
 
 ## Why
@@ -10,7 +11,7 @@ Profile: `<profile>`. Build slot: `<slot or n/a>`. Port / test DB: `<value or n/
 
 ## Read first
 - `AGENTS.md` ("How we work") and `<lessons-path>`.
-- Decisions of related branches: <branch names, from ROADMAP "Decisions taken on the way" or REPORT>.
+- Decisions of related branches: <branch names, from the decisions log>.
 - Specs: <requirement ids, docs sections>.
 - Code: <modules, files, key functions>.
 
@@ -27,6 +28,6 @@ N. Tests: pure logic with injected time and no sleeps; fakes for OS, network and
 - <explicit list, including other agents' worktrees>
 
 ## Done when
-- `sh scripts/gate.sh` passes (cheap profiles), or the branch checks from the profile pass (compiled profiles).
-- Decisions taken are recorded: <ROADMAP "Decisions taken on the way" | the report>.
-- Small commits, each passing lint and fmt; one-line `type/description` messages; no trailers; no push.
+- `sh scripts/gate.sh` passes (cheap profiles), or the branch checks from AGENTS.md pass (compiled profiles).
+- Decisions taken are recorded in `<decisions_log>` (tracked), in a commit on the branch.
+- Small commits, each passing lint and fmt; messages in the commit format above; no trailers unless allowed; no push.

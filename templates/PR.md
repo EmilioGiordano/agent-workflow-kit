@@ -1,4 +1,4 @@
-<!-- PR body template. The orchestrator fills it from the TASK, the implementer report and the review. Title: `type/short description`. No attribution lines unless the project's AGENTS.md allows them. -->
+<!-- PR body template. The orchestrator fills it from the TASK, the implementer report and the review. Title: in the project's commit format (AGENTS.md commit_format). No attribution lines unless AGENTS.md allows them. A project PR template (.github/PULL_REQUEST_TEMPLATE*) wins: fill its sections with this content. -->
 ## What
 <One paragraph: the user-visible change.>
 
@@ -13,9 +13,10 @@
 
 ## Verification
 - Review: PASS after <n> rounds (<reviewer verdict summary>).
-- Gate after merging `main`: <pass, with date and commit>.
-- CI: <green on ...>.
-- UI validation: <steps run and result; evidence links or attached screenshots/logs>. Or: `n/a — <reason>`.
+- Extra reviews: <name: result, or n/a>.
+- Gate after merging `<default-branch>`: <pass, with date and commit>.
+- CI: <green on ... | cannot run (ci: <value>): gate re-run on the merged result, <pass, commit>>.
+- UI validation (<mode>): <steps run and result; evidence links: screenshots, request/response logs, transcripts>. Or: `n/a — <reason>`.
 
 ## New dependencies
 <name, purpose, alternative rejected, licence — or "none">

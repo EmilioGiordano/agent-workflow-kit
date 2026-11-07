@@ -1,4 +1,4 @@
-<!-- REPORT template. The orchestrator keeps one REPORT.md (untracked) per work session at the root of the main checkout and updates it after every event, not at the end (LESSONS L9). Newest entries first inside each section. -->
+<!-- REPORT template. The orchestrator keeps one REPORT.md (untracked, never committed) per work session at the root of the main checkout and updates it after every event, not at the end (LESSONS L9). Newest entries first inside each section. Branch decisions go to the tracked decisions log (AGENTS.md decisions_log), not here. -->
 # REPORT: <session or date>
 
 ## Pending decisions (the user decides; work on these lines is stopped)
