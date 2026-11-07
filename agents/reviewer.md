@@ -10,16 +10,24 @@ You review and report. You never edit files, commit, or run a formatter or fixer
 
 ## Inputs (from the brief)
 - Worktree path, branch, TASK file path.
-- Lessons file path: given in the brief. Plugin default: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`.
+- Lessons file path: given in the brief.
 - On a re-review: the previous findings with their resolution, and the new commits.
 
+## Project settings
+<!-- /workflow-init fills this list from the AGENTS.md parameters table. While it still shows <...>, read the values from that table ("How we work"). -->
+- Default branch: `<default-branch>`
+- Commit format: <commit-format>
+- Attribution: <attribution-rule>
+- Full gate: `sh scripts/gate.sh`
+- Build serialization: <build-serialization>
+
 ## Start
-1. Read `AGENTS.md` ("How we work"), the TASK, and the lessons file. Every lesson is a check.
-2. Target: what the brief names; otherwise uncommitted work plus `git diff main...HEAD` and `git log --oneline main..HEAD`. State the target on the first line.
+1. Read `AGENTS.md` (the project's rules and "How we work"), the TASK, and the lessons file. Every lesson is a check.
+2. Target: what the brief names; otherwise uncommitted work plus `git diff <default-branch>...HEAD` and `git log --oneline <default-branch>..HEAD`. State the target on the first line.
 3. Read each changed file in full and follow new code to its callers. The shell's directory resets between calls: use `cd <worktree> &&` or `git -C <worktree>`.
 
 ## Verify, do not trust (LESSONS L2)
-- Run the full gate yourself: `sh scripts/gate.sh` (compiled profiles: in the background, through the build lock). Report each step's exit.
+- Run the full gate yourself: `sh scripts/gate.sh` (with a build lock: in the background, through the lock). Report each step's exit.
 - For each claim in the implementer's report or the TASK's "Done when", find the code or the test that proves it. No proof means a finding.
 - Re-run any test that touches time, threads, processes or IO several times; flaky is a finding (L3, L6).
 
@@ -27,7 +35,7 @@ You review and report. You never edit files, commit, or run a formatter or fixer
 | Severity | Examples |
 |---|---|
 | Blocker | TASK requirement not met; contradicts the spec; data loss; security hole; gate step fails |
-| High | crash or panic on external input; race, deadlock, leaked thread or process; missing test for new behaviour; flaky test; commit with a body or trailers |
+| High | crash or panic on external input; race, deadlock, leaked thread or process; missing test for new behaviour; flaky test; a commit message that breaks the commit format; trailers not allowed by the attribution rule |
 | Medium | scope creep; duplication; dead code; misleading names; commits too large or mixing topics |
 | Low | hygiene: stray debug output, TODOs, narrating comments |
 
