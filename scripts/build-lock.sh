@@ -7,7 +7,15 @@
 #   --full  heavy step (full test, clippy, release build): higher memory threshold, more jobs
 #
 # Slot: if <worktree>/.build-slot exists (one line, an absolute dir, untracked),
-# CARGO_TARGET_DIR and BUILD_SLOT_DIR are set to it. One slot per branch; never share.
+# BUILD_SLOT_DIR is set to it, and CARGO_TARGET_DIR too unless the project sets its own
+# target-dir in .cargo/config.toml (the project's per-worktree setting wins). One slot per branch.
+#
+# Waiting: the lock waits while any BUILD_LOCK_PROCS process runs, anywhere on the machine.
+# - Under rustup, cargo runs through a proxy: one build shows as 2 cargo processes.
+# - rust-analyzer (check on save), `tauri dev`, `cargo watch` and other sessions keep cargo
+#   alive and block the lock until BUILD_LOCK_MAX_WAIT (exit 75). Stop them before locked builds.
+# - Without PowerShell (Windows) or /proc/meminfo, free memory is unreadable: the lock then
+#   checks processes only and says so.
 #
 # Settings (env, defaults in brackets):
 #   BUILD_LOCK_DIR        lock directory          [${TMPDIR:-/tmp}/agent-workflow-build.lock]
@@ -48,8 +56,13 @@ if [ -f "$root/.build-slot" ]; then
     exit 2
   fi
   BUILD_SLOT_DIR=$slot
-  CARGO_TARGET_DIR=$slot
-  export BUILD_SLOT_DIR CARGO_TARGET_DIR
+  export BUILD_SLOT_DIR
+  if [ -f "$root/.cargo/config.toml" ] && grep -q '^[[:space:]]*target-dir[[:space:]]*=' "$root/.cargo/config.toml"; then
+    echo "build-lock.sh: .cargo/config.toml sets target-dir; keeping it" >&2
+  else
+    CARGO_TARGET_DIR=$slot
+    export CARGO_TARGET_DIR
+  fi
 fi
 
 case "$(uname -s 2>/dev/null)" in
