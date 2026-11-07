@@ -1,13 +1,13 @@
 # agent-workflow-kit
 
-A Claude Code plugin that sets up a multi-agent development workflow in any project. The main session acts as orchestrator. An implementer and a reviewer iterate on each branch until the reviewer gives PASS. The orchestrator then merges `main`, re-runs the gate, pushes, opens the PR, waits for CI, validates the feature through its interface and merges.
+A Claude Code plugin that sets up a multi-agent development workflow in any project. The main session acts as orchestrator. An implementer and a reviewer iterate on each branch until the reviewer gives PASS. The orchestrator then merges the default branch, re-runs the gate, pushes, opens the PR, waits for CI, validates the feature through its interface and merges.
 
 ```
 TASK -> implementer (own worktree) -> reviewer -> FAIL? -> same implementer fixes -> same reviewer re-reviews
-                                              PASS -> merge main -> gate -> push -> PR -> CI -> UI validation -> merge
+                                              PASS -> merge default branch -> gate -> push -> PR -> CI -> UI validation -> merge
 ```
 
-The kit provides only how the team works. Project-specific rules (domain, specs, ADRs) stay in your repo.
+The kit provides only how the team works. Project-specific rules (domain, specs, ADRs) stay in your repo, and where your repo already has workflow rules (commit format, default branch, merge approval, required reviews), they win.
 
 ## What is inside
 
@@ -16,14 +16,15 @@ The kit provides only how the team works. Project-specific rules (domain, specs,
 | `agents/implementer.md` | Subagent: works in its own worktree; small commits that each pass lint and fmt; no push, no trailers; fixed-format report |
 | `agents/reviewer.md` | Subagent, read-only: runs the gate, verifies the implementer's claims, gives PASS/FAIL with severity, `file:line`, failure scenario and fix |
 | `skills/orchestrate/SKILL.md` | The full loop and the orchestrator's duties |
-| `commands/workflow-init.md` | `/workflow-init`: detects the stack, asks 5 questions, writes the project files |
+| `commands/workflow-init.md` | `/workflow-init`: reads the project's rules, detects stacks, branch, commit format and CI, resolves conflicts with you, writes the project files |
 | `profiles/*.md` | Per-stack parameters: parallelism, build serialization, isolation, gate commands, failure criteria, UI validation mode |
-| `scripts/gates/*.sh` | Example gates, POSIX sh. Each step prints `== step` and `-- exit N`; any non-zero exit fails the gate |
+| `scripts/gates/*.sh` | Gate skeleton plus stock steps per stack, POSIX sh. Each step prints `== step` and `-- exit N`; any non-zero exit fails the gate |
 | `scripts/build-lock.sh` | Machine-wide build lock with a free-memory threshold and per-worktree build slots, for compiled stacks |
 | `templates/` | TASK, PR, REPORT, merge policy and the "How we work" section |
+| `reference/` | Detection rules for init, and the validation modes (browser, desktop-window, http, protocol, cli) |
 | `LESSONS.md` | Lessons learned. The single source that the agents and the skill reference |
 
-Profiles: `rust-compiled`, `php-laravel`, `node-ts`, `python`.
+Profiles: `rust-compiled`, `php-laravel`, `node-ts`, `python`. A hybrid project (e.g. Tauri: Rust + TypeScript) uses several.
 
 ## Install
 
@@ -64,21 +65,24 @@ claude plugin validate <path-to>/agent-workflow-kit
    ```
    /agent-workflow-kit:workflow-init
    ```
-   It detects the profile and asks five questions:
-   - who merges;
-   - whether there is a UI to validate, and how;
-   - machine limits and parallelism;
-   - the commit language;
-   - the attribution rules.
+   It works in this order:
+   - It reads your project's own rules (AGENTS.md, CLAUDE.md, CONTRIBUTING, agents, hooks, commitlint).
+   - It detects the stacks, the default branch, the commit format, the CI capability and the gate (derived from CI and your scripts).
+   - It shows each conflict with the kit's defaults and lets you choose, per row, project, kit or abort. The project wins by default.
+   - It asks only what detection left open, then runs the static gate steps once on a clean checkout and reports any baseline failure.
 
    It then writes:
-   - the "How we work" block in `AGENTS.md`;
-   - `.claude/agents/implementer.md` and `reviewer.md`, with your gate;
-   - `scripts/gate.sh` and an empty `scripts/gate.local.sh`;
+   - the "How we work" block in `AGENTS.md`, whose parameters table records every answer;
+   - the agents in `.claude/agents/` (`implementer` / `reviewer`, or `kit-implementer` / `kit-reviewer` when the project already has unmarked agents with those names);
+   - `scripts/gate.sh`, and `scripts/gate.local.sh` (created with a usage comment only, never overwritten);
    - for compiled stacks, `scripts/build-lock.sh`;
-   - the `.gitignore` entries.
+   - the `.gitignore` and `.gitattributes` entries.
 
-   Re-running it updates only the blocks between `<!-- agent-workflow-kit:begin -->` and `<!-- agent-workflow-kit:end -->`, and only scripts marked `# agent-workflow-kit:managed`.
+   Re-running it reproduces the same files from the parameters table. It updates only:
+   - the blocks between `<!-- agent-workflow-kit:begin -->` and `<!-- agent-workflow-kit:end -->`;
+   - the text outside the steps markers of scripts marked `# agent-workflow-kit:managed`.
+
+   The gate's steps section changes only after you approve the diff.
 2. Ask for a feature:
    ```
    /agent-workflow-kit:orchestrate feat/<topic> <goal in plain words>
@@ -91,7 +95,9 @@ claude plugin validate <path-to>/agent-workflow-kit
 
    It stops and asks whenever a decision belongs to you.
 
-Agent names once installed: `agent-workflow-kit:implementer` and `agent-workflow-kit:reviewer`. The project copies written by init are named `implementer` and `reviewer`, and the skill prefers them.
+Agent names once installed: `agent-workflow-kit:implementer` and `agent-workflow-kit:reviewer`. The skill prefers the project copies written by init (the names in the `agents` row of AGENTS.md), and only those carrying the kit marker.
+
+`${CLAUDE_PLUGIN_ROOT}` is substituted in the plugin's skill, command and agent text, but it is not set in the Bash tool, and it stays literal in files copied into a project. So the agents take the lessons path from the brief.
 
 ## Add a profile
 
@@ -100,19 +106,20 @@ Agent names once installed: `agent-workflow-kit:implementer` and `agent-workflow
    - `build_serialization`, `build_lock`, `isolation`;
    - `suite_cost`, `gate_script`, `ui_validation`, `failure`.
 2. Add these sections to the profile: Gate (the exact commands, in order), Isolation, UI validation and CI.
-3. Add `scripts/gates/<name>.sh`, copied from an existing gate. Keep:
-   - the `step` helper;
+3. Add `scripts/gates/<name>.sh`, copied from an existing gate. Keep everything outside `# agent-workflow-kit:steps:begin` / `:end` byte-identical, since a hybrid gate joins the steps sections of several profiles under one head and foot. That shared part holds:
+   - the `step`, `step_if` and `step_need` helpers;
    - the `== step` / `-- exit N` output;
    - the `scripts/gate.local.sh` hook;
    - `GATE PASS|FAIL` with exit 1 on any failed step.
-   A missing tool must fail, not pass.
+
+   Between the markers, start with `# -- stack: <name>`, and mark each init decision with a `# init:` comment. A missing tool must fail (`step_need`), never be installed.
 4. Add the detection row to `commands/workflow-init.md`.
 5. Check it:
    ```sh
    sh -n scripts/gates/<name>.sh
    claude plugin validate .
    ```
-   Then try it on a real project of that stack.
+   To exercise a gate, use fake tools only, on a PATH where `command -v` resolves every tool to the fake (LESSONS L14). Then try it on a real project of that stack.
 
 ## Feed lessons back
 
@@ -130,5 +137,6 @@ Every project inherits the lesson on its next session.
 
 - The orchestrator is the only one that pushes and opens PRs. It merges only if init set it as merger, and only when every merge-policy criterion holds.
 - Branches and worktrees are never deleted. A `backup/<branch>-before-rework` branch is created before any history rewrite.
-- Commit messages are one line, `type/description`. No attribution trailers unless the project allows them.
+- Commit messages follow the project's format (default: one line, `type/description`). No attribution trailers unless the project allows them.
+- The gate never installs tools; a missing tool fails. Laravel tests refuse to run against a database whose name lacks `test`.
 - Pending user decisions (licence, third-party downloads, publishing, anything irreversible) are recorded and never bypassed.
