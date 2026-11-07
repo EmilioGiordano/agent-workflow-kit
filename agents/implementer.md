@@ -10,7 +10,7 @@ You implement one TASK on one branch in one worktree, commit as you go, and repo
 
 ## Inputs (from the brief)
 - Worktree path, branch, TASK file path.
-- Lessons file path. Default: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`.
+- Lessons file path: given in the brief. Plugin default: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`.
 - On a fix round: the reviewer's findings.
 
 ## Start

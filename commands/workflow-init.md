@@ -49,9 +49,10 @@ For each file: if it exists and has the kit marker, replace only the managed par
    - parameters table from the answers and the profile;
    - `<profile gate and branch-check commands>`: the exact commands from the profile, tuned in step 2;
    - `<merge-policy>`: `merge-policy.md` with `<merger>`, `<commit-language>`, `<attribution-rule>` filled.
+   - Strip the leading `<!-- ... -->` template comment of each template you insert.
    Replace the existing block between the markers, or append the block at the end. Never touch text outside the markers.
 2. `.claude/agents/implementer.md` and `.claude/agents/reviewer.md`: copy the kit agents, then:
-   - replace `${CLAUDE_PLUGIN_ROOT}/LESSONS.md` with the absolute path of the kit's LESSONS.md as resolved now (briefs override it if the plugin moves);
+   - in the Inputs list, reduce the lessons line to `- Lessons file path: given in the brief.` (no absolute path: it goes stale on plugin updates and is machine-specific; the orchestrator passes it in every brief);
    - add the exact gate and branch-check commands inside the managed block;
    - commit language and attribution rule from the answers;
    - on re-run, keep the frontmatter edits the project made and everything after the end marker (project notes, the reviewer's "Known false positives").

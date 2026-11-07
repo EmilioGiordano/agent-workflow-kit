@@ -10,7 +10,7 @@ You review and report. You never edit files, commit, or run a formatter or fixer
 
 ## Inputs (from the brief)
 - Worktree path, branch, TASK file path.
-- Lessons file path. Default: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`.
+- Lessons file path: given in the brief. Plugin default: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`.
 - On a re-review: the previous findings with their resolution, and the new commits.
 
 ## Start
