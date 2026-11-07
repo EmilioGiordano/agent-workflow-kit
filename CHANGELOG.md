@@ -18,7 +18,8 @@ Fixes from trial runs of `/workflow-init` on four real projects: a Laravel API w
 
 ### Persistence
 - The parameters table records every answer: profiles, default branch, commit format, merge approval, extra reviews, review-round limit, CI, remote, validation procedure, memory limits, slot dir, worktree root and setup, gate tuning, agent names and model, decisions log.
-- Gate scripts have `# agent-workflow-kit:steps:begin` / `:end` markers. Init owns the steps section and replaces it on re-run only after the user approves a diff; dropped steps are recorded as `# dropped:`. We chose markers over a separate data file: one file, the same `step` helpers, nothing more to keep in sync.
+- Gate scripts have `# agent-workflow-kit:steps:begin` / `:end` markers. Init owns the steps section and replaces it on re-run only after the user approves a diff. Re-derivation keeps the recorded tuning (`gate_tuning`, `# dropped:` lines). We chose markers over a separate data file: one file, the same `step` helpers, nothing more to keep in sync.
+- Upgrading from 0.1.x: a managed `gate.sh` without steps markers counts as all steps. Init re-derives it, shows the diff, and replaces it only on OK.
 - `scripts/gate.local.sh` is created with a usage comment only and is never overwritten.
 - The agents have a `## Project settings` slot inside the managed block, and ship with the lessons line in its final form.
 
@@ -29,7 +30,7 @@ Fixes from trial runs of `/workflow-init` on four real projects: a Laravel API w
 - `profiles` is a list. A hybrid gate has one steps section per stack, and branch checks are chosen by path.
 - Each new worktree runs a lockfile install (`worktree_setup`) before its first commit.
 - New validation modes `http` and `protocol`, with per-worktree isolation of data and config dirs, and rules for a desktop app versus the build lock (`reference/validation-modes.md`).
-- Laravel: the gate refuses to test unless the testing database (phpunit.xml, then `.env.testing`) is `:memory:` or named `*test*`. Each worktree gets its own `.env.testing`, and `.env.testing` is gitignored.
+- Laravel: the gate refuses to test unless the testing database is `:memory:` or named `*test*`. It reads phpunit.xml first, then `.env.testing`, which it trusts only when phpunit.xml sets `APP_ENV=testing`. It also refuses when a cached config exists. Each worktree gets its own `.env.testing`, and `.env.testing` is gitignored.
 - Init runs the static gate steps once on a clean checkout. On failure it offers a separate formatting branch instead of letting every review FAIL.
 
 ### Smaller items
