@@ -25,7 +25,7 @@ if [ -x vendor/bin/pest ]; then
 else
   step test php artisan test --parallel
 fi
-if [ -f package.json ] && grep -q '"build"' package.json; then
+if [ -f package.json ] && grep -q '"build":' package.json; then
   step assets npm run build
 fi
 
