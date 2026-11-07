@@ -51,15 +51,27 @@ step_need() {
 # init: keep only tools composer.json declares (pint, phpstan/larastan, pest); record the others as "# dropped:".
 # init: assets only if package.json has scripts.build.
 # Refuses to test unless the testing database is clearly a test one: phpunit.xml <env DB_DATABASE> first,
-# then .env.testing. Without either, Laravel would run RefreshDatabase against the .env database.
+# then .env.testing, which Laravel loads only when phpunit.xml sets APP_ENV=testing. Otherwise
+# RefreshDatabase would run against the .env database. A cached config bypasses .env files: refused too.
 test_db_guard() {
+  if [ -f bootstrap/cache/config.php ]; then
+    echo "refusing: bootstrap/cache/config.php exists (cached config ignores .env.testing); run php artisan config:clear"
+    return 1
+  fi
   db=""
+  app_env=""
   for f in phpunit.xml phpunit.xml.dist; do
     [ -f "$f" ] || continue
-    db=$(grep -v '<!--' "$f" | sed -n 's/.*name="DB_DATABASE"[^>]*value="\([^"]*\)".*/\1/p' | head -n 1)
+    xml=$(grep -v '<!--' "$f")
+    db=$(echo "$xml" | sed -n 's/.*name="DB_DATABASE"[^>]*value="\([^"]*\)".*/\1/p' | head -n 1)
+    app_env=$(echo "$xml" | sed -n 's/.*name="APP_ENV"[^>]*value="\([^"]*\)".*/\1/p' | head -n 1)
     break
   done
   if [ -z "$db" ] && [ -f .env.testing ]; then
+    if [ "$app_env" != testing ]; then
+      echo "refusing: .env.testing is loaded only when phpunit.xml sets APP_ENV=testing"
+      return 1
+    fi
     db=$(sed -n 's/^DB_DATABASE=//p' .env.testing | tail -n 1 | tr -d "\"'\r")
   fi
   case $db in

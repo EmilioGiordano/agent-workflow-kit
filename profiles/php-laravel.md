@@ -26,7 +26,7 @@ npm run build                          # only if package.json has scripts.build
 ```
 
 - Keep only the tools composer.json declares; record the rest as `# dropped: <tool> (not declared)`.
-- The guard reads `DB_DATABASE` from phpunit.xml `<env>` (commented lines do not count), then from `.env.testing`. It passes for `:memory:` or a name containing `test`. Otherwise the test step does not run. Never remove the guard.
+- The guard reads `DB_DATABASE` from phpunit.xml `<env>` (commented lines do not count), then from `.env.testing`. It trusts `.env.testing` only when phpunit.xml sets `APP_ENV=testing`, since Laravel loads it only then. It refuses when `bootstrap/cache/config.php` exists. It passes for `:memory:` or a name containing `test`. Otherwise the test step does not run. Never remove the guard.
 - The gate is cheap: every implementer runs the full gate itself before reporting.
 
 ## Isolation
