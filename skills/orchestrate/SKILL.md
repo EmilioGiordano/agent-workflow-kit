@@ -47,7 +47,7 @@ You are the orchestrator: you write TASKs, spawn and steer the agents, coordinat
 6. Stop and ask the user only for a decision the merge policy reserves for them.
 
 ## 3. Build coordination (per profile)
-- `build_serialization: lock`: only one heavy build at a time across all worktrees. Implementers run branch checks only; you run the full gate. Run full gates and release builds in the background and wait for completion.
+- `build_serialization: lock`: only one heavy build at a time across all worktrees. Implementers run branch checks only; the reviewer runs the full gate through the lock; you run it again only after merging main. Full gates and release builds run in the background; wait for completion.
 - `build_serialization: none`: implementers run the full gate themselves; parallelize freely up to the limit.
 - Gate exit 75 (lock timeout) is not a code failure: report it with the numbers it printed.
 
