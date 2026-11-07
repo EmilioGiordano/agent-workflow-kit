@@ -23,7 +23,10 @@ These paths are substituted when this command loads. The variable is not set in 
 - Markdown the kit owns sits between `<!-- agent-workflow-kit:begin -->` and `<!-- agent-workflow-kit:end -->`. Re-runs replace only that block, generated from the parameters table.
 - A Markdown file without the markers (e.g. an existing AGENTS.md): append a new marked block at the end, only after showing the block and getting an OK. Never edit text outside the markers.
 - Any other file without the kit marker is never overwritten. An unmarked `.claude/agents/implementer.md` or `reviewer.md` means the kit agents are installed as `kit-implementer.md` / `kit-reviewer.md`, with the frontmatter `name:` changed to match.
-- `scripts/gate.sh` carries `# agent-workflow-kit:managed`. Init refreshes the text outside `# agent-workflow-kit:steps:begin` / `:end`. The steps section is derived; on re-run, re-derive it, show the diff against the current section, and replace it only on OK.
+- `scripts/gate.sh` carries `# agent-workflow-kit:managed`. Init refreshes the text outside `# agent-workflow-kit:steps:begin` / `:end`. The steps section is derived. On re-run:
+  - re-derive it, applying the `gate_tuning` row and every existing `# dropped:` line and opt-in, so that only new detections show up;
+  - show the diff against the current section, and replace the section only on OK.
+- A managed `gate.sh` without steps markers (written by kit 0.1.x) counts as all steps: re-derive, show the diff, and replace it only on OK.
 - `scripts/gate.local.sh` is the project's: created with a usage comment only, never overwritten.
 - `.gitignore` and `.gitattributes`: append missing lines only, and list them in the summary.
 - Match each file's line endings: a CRLF file gets a CRLF block.
@@ -69,7 +72,7 @@ Several match: they all go in `profiles` (a hybrid). None match: list the profil
 Do not continue until the user answers. Unanswered items take the default and are listed in the report.
 
 ## 5. Baseline
-Run the static steps of the derived gate (format, lint, types; no compile, no tests) on a clean checkout of the default branch. On failure, follow "Baseline" in `detection.md`: report the result and offer the formatting branch or dropping the step. The user decides.
+Run the static steps of the derived gate (format, lint, types; no compile, no tests) on a clean checkout of the default branch. Use the current checkout only if it is on the default branch, has no local changes, and has its dependencies installed. Otherwise report that and ask; never create a worktree just for this. On failure, follow "Baseline" in `detection.md`: report the result and offer the formatting branch or dropping the step. The user decides.
 
 ## 6. Write
 1. `AGENTS.md` (create it with a `# AGENTS.md` title if missing). Fill `how-we-work.md`:
@@ -83,7 +86,7 @@ Run the static steps of the derived gate (format, lint, types; no compile, no te
    - on re-run, keep the project's frontmatter edits and everything after the end marker (project notes, the reviewer's "Known false positives").
 3. `scripts/gate.sh`: the head and foot of `scripts/gates/<first profile>.sh`, with the header set to `profiles=<list>`. The steps section holds:
    - one `# -- stack: <profile>` part per profile, from the derived steps;
-   - each step only once; no `# init:` comment lines;
+   - each step only once, with a unique name (hybrids prefix the stack, e.g. `rust-test`, `ts-test`); no `# init:` comment lines;
    - a `# dropped: <step> (<reason>)` line for each dropped or deferred step.
 4. `scripts/gate.local.sh`, only if missing: a comment explaining that project steps go here, each as `step <name> <command>`. Show proposals (e.g. path-filtered CI jobs); write them only if the user asks.
 5. Build lock (`build_serialization: lock`): copy `scripts/build-lock.sh` as is; set the recorded thresholds as the env defaults at its top.
