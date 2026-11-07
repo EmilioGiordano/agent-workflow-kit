@@ -15,29 +15,32 @@ failure: "any step exit != 0"
 
 Parameters for Python packages, services and CLIs. `/workflow-init` and the `orchestrate` skill read the frontmatter; the sections below are the rules that go with it.
 
-## Gate (full, in this order)
+## Gate (stock steps; init derives the real ones from CI first)
 
-`<r>` is `uv run` (uv.lock), `poetry run` (poetry.lock) or nothing (active `.venv`).
+`<r>` is `uv run --no-sync` (uv.lock), `poetry run` (poetry.lock) or nothing (the worktree's `.venv`).
 
 ```sh
 <r> ruff format --check .
 <r> ruff check .
-<r> mypy .
-<r> pytest -n auto
+<r> mypy .                    # if declared
+<r> pytest -n auto            # -n auto only with pytest-xdist declared
 ```
 
-`pytest -n auto` needs `pytest-xdist` in the dev dependencies. The gate is cheap: every implementer runs the full gate itself before reporting.
+- Keep only declared tools (e.g. black, flake8 or pyright instead of ruff and mypy, if that is what the project uses).
+- `--no-sync` keeps `uv run` from installing. A missing tool fails its step.
+- The gate is cheap: every implementer runs the full gate itself before reporting.
 
 ## Isolation
 
-- Each worktree has its own `.venv` (`uv sync` or `python -m venv .venv && pip install -e .[dev]`); never share one.
+- Each worktree has its own `.venv` (`uv sync --frozen`, or `python -m venv .venv && pip install -e .[dev]`); never share one.
 - Tests that touch files use `tmp_path`; tests that bind ports use port 0.
 - A service with a database: one test database per worktree, named in the TASK.
 
 ## UI validation
 
-- Default `none`: the PR states it, and the orchestrator runs the CLI or API calls from the TASK's validation list and pastes the output as evidence.
-- A web UI (Django, FastAPI + frontend): set `ui_validation: browser` and validate with headless Playwright like node-ts.
+- Default `none`: the PR states it. CLIs use `cli`; HTTP services use `http`.
+- A web UI (Django, FastAPI + frontend): `browser`, with headless Playwright as in node-ts.
+- Details: `reference/validation-modes.md`.
 
 ## CI
 
