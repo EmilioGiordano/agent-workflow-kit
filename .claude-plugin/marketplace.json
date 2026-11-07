@@ -1,0 +1,14 @@
+{
+  "name": "agent-workflow-kit",
+  "description": "Marketplace for the agent-workflow-kit plugin.",
+  "owner": {
+    "name": "agent-workflow-kit contributors"
+  },
+  "plugins": [
+    {
+      "name": "agent-workflow-kit",
+      "source": "./",
+      "description": "Multi-agent dev workflow: implementer, reviewer, orchestrate skill, stack profiles and /workflow-init."
+    }
+  ]
+}
