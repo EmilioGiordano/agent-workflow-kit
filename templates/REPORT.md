@@ -5,7 +5,7 @@
 - [ ] <decision needed> — options: <a / b>; blocked: <branches>; since <time>.
 
 ## Status
-| Branch | PR | Review | Gate after main | CI | UI validation | State |
+| Branch | PR | Review | Gate after merging the default branch | CI | UI validation | State |
 |---|---|---|---|---|---|---|
 | `<type>/<topic>` | #<n> | PASS r<k> | pass | green | pass (evidence) | merged / ready / in review / blocked |
 
