@@ -1,5 +1,6 @@
 ---
-description: Set up the multi-agent workflow in this project - read the project's own rules, detect stacks, branch, commit format and CI, resolve conflicts with the user, then write the "How we work" block of AGENTS.md, the agents, scripts/gate.sh and (compiled stacks) scripts/build-lock.sh. Safe to re-run; it only updates its own marked blocks.
+name: workflow-init
+description: Set up the multi-agent workflow in this project - read the project's own rules, detect stacks, harnesses, branch, commit format and CI, resolve conflicts with the user, then write the "How we work" block of AGENTS.md, the agents, scripts/gate.sh and (compiled stacks) scripts/build-lock.sh. Safe to re-run; it only updates its own marked blocks.
 argument-hint: "[profile[,profile]]"
 disable-model-invocation: true
 ---
@@ -8,21 +9,22 @@ disable-model-invocation: true
 
 Bootstrap or update the agent workflow in the current repository. Respect the existing project: its rules win unless the user says otherwise. Write nothing before step 6.
 
-Kit files (read them; do not copy this command's text):
-- Detection rules: `${CLAUDE_PLUGIN_ROOT}/reference/detection.md`
-- Validation modes: `${CLAUDE_PLUGIN_ROOT}/reference/validation-modes.md`
-- Profiles: `${CLAUDE_PLUGIN_ROOT}/profiles/*.md`
-- Gates: `${CLAUDE_PLUGIN_ROOT}/scripts/gates/<profile>.sh`; lock: `${CLAUDE_PLUGIN_ROOT}/scripts/build-lock.sh`
-- Templates: `${CLAUDE_PLUGIN_ROOT}/templates/how-we-work.md`, `merge-policy.md`
-- Agents: `${CLAUDE_PLUGIN_ROOT}/agents/implementer.md`, `reviewer.md`
-- Lessons: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md`
+Resolve `<kit-root>` first: if `${CLAUDE_PLUGIN_ROOT}` was substituted into an absolute path when this skill loaded, use it; otherwise `<kit-root>` is `../..` relative to this `SKILL.md` file's directory. Never pass literal `$CLAUDE_PLUGIN_ROOT` to a shell command.
 
-These paths are substituted when this command loads. The variable is not set in the Bash tool: use the paths as written here, never `$CLAUDE_PLUGIN_ROOT` in a shell command.
+Kit files (read them from `<kit-root>`; do not copy this skill's text):
+- Detection rules: `<kit-root>/reference/detection.md`
+- Harnesses: `<kit-root>/reference/harnesses.md`
+- Validation modes: `<kit-root>/reference/validation-modes.md`
+- Profiles: `<kit-root>/profiles/*.md`
+- Gates: `<kit-root>/scripts/gates/<profile>.sh`; lock: `<kit-root>/scripts/build-lock.sh`
+- Templates: `<kit-root>/templates/how-we-work.md`, `merge-policy.md`
+- Agents: `<kit-root>/agents/implementer.md`, `reviewer.md`
+- Lessons: `<kit-root>/LESSONS.md`
 
 ## Ownership rules
 - Markdown the kit owns sits between `<!-- agent-workflow-kit:begin -->` and `<!-- agent-workflow-kit:end -->`. Re-runs replace only that block, generated from the parameters table.
 - A Markdown file without the markers (e.g. an existing AGENTS.md): append a new marked block at the end, only after showing the block and getting an OK. Never edit text outside the markers.
-- Any other file without the kit marker is never overwritten. An unmarked `.claude/agents/implementer.md` or `reviewer.md` means the kit agents are installed as `kit-implementer.md` / `kit-reviewer.md`, with the frontmatter `name:` changed to match.
+- Any other file without the kit marker is never overwritten. An unmarked `implementer.md` or `reviewer.md` in a harness's agents directory (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`) means the kit agents are installed as `kit-implementer.md` / `kit-reviewer.md`, with the frontmatter `name:` changed to match.
 - `scripts/gate.sh` carries `# agent-workflow-kit:managed`. Init refreshes the text outside `# agent-workflow-kit:steps:begin` / `:end`. The steps section is derived. On re-run:
   - re-derive it, applying the `gate_tuning` row and every existing `# dropped:` line and opt-in, so that only new detections show up;
   - show the diff against the current section, and replace the section only on OK.
@@ -39,7 +41,8 @@ These paths are substituted when this command loads. The variable is not set in 
 Read every source listed under "Project rules" in `detection.md`. Note each rule with `file:line`.
 
 ## 3. Detect
-Follow `detection.md` for each item:
+Follow `detection.md` and `harnesses.md` for each item:
+- harnesses (the active harness plus any detected in the repo: `claude`, `antigravity`, `gemini-cli`);
 - profiles (a list, from `$ARGUMENTS` or the detect table below);
 - default branch and commit format;
 - CI capability and remote;
@@ -59,6 +62,7 @@ Several match: they all go in `profiles` (a hybrid). None match: list the profil
 ## 4. Conflicts, then questions (one message)
 1. Show the conflict table from `detection.md`: rule | project says (`file:line`) | kit default | proposed (project). The user answers per row: `project`, `kit` or `abort`. On `abort`, stop without writing.
 2. Show the detected values (the parameters table, with defaults marked) and ask only what detection left open:
+   - harnesses to generate project agents for [detected];
    - who merges, and any approval or batching rule [project rule, else orchestrator];
    - extra required reviews and the review-round limit [project rule, else none];
    - validation mode and its exact procedure [detected mode];
@@ -67,7 +71,10 @@ Several match: they all go in `profiles` (a hybrid). None match: list the profil
    - attribution [none];
    - agent model [the project's existing agents, else inherit];
    - decisions log [ROADMAP.md if it has "Decisions taken on the way", else `docs/decisions.md`].
-3. If CLAUDE.md exists and does not import AGENTS.md, offer to add an `@AGENTS.md` line to it (Claude Code loads CLAUDE.md, not AGENTS.md).
+3. Rules entry-point files (see `harnesses.md`):
+   - If `claude` is in `harnesses` and `CLAUDE.md` exists without importing `AGENTS.md`, offer to add `@AGENTS.md` to it (Claude Code loads `CLAUDE.md`, not `AGENTS.md`).
+   - If `gemini-cli` is in `harnesses` and `GEMINI.md` does not import `AGENTS.md`, offer to add `@AGENTS.md` to `GEMINI.md` (Gemini CLI loads `GEMINI.md` by default).
+   - `antigravity` loads `AGENTS.md` natively; no import is needed.
 
 Do not continue until the user answers. Unanswered items take the default and are listed in the report.
 
@@ -80,9 +87,10 @@ Run the static steps of the derived gate (format, lint, types; no compile, no te
    - `<gate and branch-check commands>`: the derived commands, per stack for hybrids;
    - `<merge-policy>`: `merge-policy.md` filled from the table; drop the alternatives that do not apply;
    - drop the leading `<!-- ... -->` template comment of each inserted template.
-2. Agents (`.claude/agents/<name>.md`, names per the ownership rules): copy the kit agents, then:
+2. Agents (for each harness in `harnesses`, into its agents dir from `harnesses.md` — `.claude/agents/`, `.agents/agents/`, `.gemini/agents/` — with names per the ownership rules): copy the kit agents, then:
+   - insert that harness's `tools:` allowlist (and harness fields such as `subagent: true` or `kind: local`) from `harnesses.md` into the frontmatter;
    - fill `## Project settings` inside the managed block from the table;
-   - set `model:` in the frontmatter when `agent_model` is not `inherit`;
+   - set `model:` in the frontmatter when the harness's `agent_model` is not `inherit`;
    - on re-run, keep the project's frontmatter edits and everything after the end marker (project notes, the reviewer's "Known false positives").
 3. `scripts/gate.sh`: the head and foot of `scripts/gates/<first profile>.sh`, with the header set to `profiles=<list>`. The steps section holds:
    - one `# -- stack: <profile>` part per profile, from the derived steps;
@@ -108,6 +116,6 @@ Re-run check: the AGENTS.md block, the agents and the gate must regenerate byte-
 - Conflicts: each row and who won.
 - Parameters: mark the defaults the user did not confirm.
 - Gate: derived steps, dropped tools, opt-ins left off, and the baseline result.
-- Next step: `/agent-workflow-kit:orchestrate <type>/<topic> <goal>`.
+- Next step: run the `orchestrate` skill (`/agent-workflow-kit:orchestrate <type>/<topic> <goal>` in Claude Code, `/orchestrate <type>/<topic> <goal>` in Antigravity, or ask the orchestrator to orchestrate `<type>/<topic>`).
 
 Do not commit unless the user asks. If they do, follow the project's commit format; no trailers unless allowed.
