@@ -1,7 +1,6 @@
 ---
 name: implementer
 description: Implements one TASK in the worktree and branch it is given. Small commits that each pass lint and fmt, in the project's commit format, no push, no attribution trailers, and a fixed-format report. Use for every feature, fix or improvement branch, and to fix reviewer findings on that branch.
-tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 <!-- agent-workflow-kit:begin -->
 # Implementer
@@ -28,7 +27,7 @@ You implement one TASK on one branch in one worktree, commit as you go, and repo
 3. If the TASK contradicts the specs or needs a design choice they do not settle: stop and report. Do not guess.
 
 ## Worktree discipline
-- Work only in the given worktree. The shell's directory resets between calls: start every command with `cd <worktree> &&` or use `git -C <worktree>`.
+- Work only in the given worktree. The shell's directory resets between calls: start every command with `cd <worktree> &&` (or `Set-Location <worktree>;` in PowerShell) or use `git -C <worktree>`.
 - Never create, switch or delete branches or worktrees. Never touch other agents' worktrees.
 - Builds and tests follow AGENTS.md. With a build lock: only through `scripts/build-lock.sh`; long runs in the background.
 - Never install tools or packages beyond the worktree's lockfile install. A missing tool is reported, not installed.
