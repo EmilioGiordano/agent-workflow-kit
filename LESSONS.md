@@ -87,7 +87,7 @@ Each entry gives the rule, who it applies to (`all`, `orchestrator`, `implemente
 
 ## L16. The project's own rules win
 - Applies to: orchestrator, all. Scope: any stack.
-- Rule: before writing workflow files, read the project's AGENTS.md, CLAUDE.md, CONTRIBUTING, agents, hooks and commitlint. List each conflict with the kit and let the user decide; the default is the project's rule.
+- Rule: before writing workflow files, read the project's AGENTS.md, CLAUDE.md, GEMINI.md, CONTRIBUTING, agents, hooks and commitlint. List each conflict with the kit and let the user decide; the default is the project's rule.
 - Why: an unchecked init once appended a block that contradicted the project's workflow in 8 places, and its commit format was rejected by the project's commit hook.
 
 ---
