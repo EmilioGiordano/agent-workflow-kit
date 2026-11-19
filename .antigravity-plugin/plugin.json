@@ -1,0 +1,15 @@
+{
+  "name": "agent-workflow-kit",
+  "displayName": "Agent Workflow Kit",
+  "version": "0.2.0",
+  "description": "Bootstraps a multi-agent dev workflow: implementer and reviewer iterate to PASS, then the orchestrator merges the default branch, gates, opens the PR, waits for CI, validates the feature and merges. Respects the project's existing rules.",
+  "author": {
+    "name": "agent-workflow-kit contributors"
+  },
+  "repository": "https://github.com/EmilioGiordano/agent-workflow-kit",
+  "suggestedPrompts": [
+    "Run workflow-init to set up the multi-agent workflow in this project",
+    "Orchestrate a feature branch through implementer, reviewer and gate",
+    "Check project rules and derive scripts/gate.sh for this repository"
+  ]
+}
