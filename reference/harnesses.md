@@ -8,39 +8,31 @@ How the kit maps onto each supported agent runtime. Everything outside this tabl
 |---|---|---|---|
 | Manifest in kit | `.claude-plugin/plugin.json` | `.antigravity-plugin/plugin.json` | `gemini-extension.json` |
 | Project rules files to inspect | `CLAUDE.md`, `.claude/agents/*`, `.claude/skills/*`, `.claude/settings*.json` | `GEMINI.md`, `.agents/agents/*`, `.agents/skills/*`, `.agents/rules/*`, `.agents/*.json` | `GEMINI.md`, `.gemini/agents/*`, `.gemini/skills/*`, `.gemini/settings.json` |
-| Loads `AGENTS.md` natively | No (offer `@AGENTS.md` in `CLAUDE.md`) | Yes | No by default (offer `@AGENTS.md` in `GEMINI.md`) |
+| Loads `AGENTS.md` natively | Only when no `CLAUDE.md` exists (2.1.277+); a `CLAUDE.md` without `@AGENTS.md` hides `AGENTS.md` (offer `@AGENTS.md` in `CLAUDE.md`) | Yes | No by default (offer `@AGENTS.md` in `GEMINI.md`) |
 | Project agents dir | `.claude/agents/<name>.md` | `.agents/agents/<name>.md` | `.gemini/agents/<name>.md` |
 | Plugin fallback agent names | `agent-workflow-kit:implementer`, `agent-workflow-kit:reviewer` | `implementer`, `reviewer` | `implementer`, `reviewer` |
-| Follow-up messaging | `SendMessage` (same agent ID) | `send_message` (same `conversationId`) | Re-invoke subagent with full prior findings history if sessions are not resumable |
-| `agent_model` values | `inherit` (omit `model:`), or Claude alias/id (`sonnet`, `opus`, `haiku`) | `inherit` (omit `model:`), or tier (`pro`, `flash`, `flash_lite`) | `inherit` (omit `model:`), or Gemini model id (e.g. `gemini-2.5-pro`, `gemini-2.5-flash`) |
-| Kit validation | `claude plugin validate .` | `agy plugin validate --strict .` | `gemini extensions list` after install |
+| Follow-up messaging | `SendMessage` (same agent ID) | `send_message` (same `conversationId`; observed on `agy 1.5.16`) | Re-invoke subagent with full prior findings history if sessions are not resumable |
+| `agent_model` values | `inherit` (omit `model:`), or Claude alias/id (`sonnet`, `opus`, `haiku`) | `inherit` (omit `model:`), or tier (`pro`, `flash`, `flash_lite`; verified on `agy 1.5.16`) | `inherit` (omit `model:`), or Gemini model id (e.g. `gemini-2.5-pro`, `gemini-2.5-flash`) |
+| Kit validation | `claude plugin validate .` | `agy plugin validate --strict .` | `gemini extensions validate <path>` |
 
 ## Tool allowlists for project agents
 
-The plugin's bundled `agents/implementer.md` and `agents/reviewer.md` omit `tools:` so every harness parses them without tool-name validation errors. When `workflow-init` writes project copies into each selected harness's agents directory, it inserts that harness's `tools:` list as a YAML array so the reviewer's read-only boundary is enforced by the runtime.
+The plugin's bundled `agents/implementer.md` and `agents/reviewer.md` omit `tools:` so every harness parses them without tool-name validation errors. Because of that, the bundled `reviewer` fallback is **read-only by instruction only** (it inherits all tools in Claude Code and Gemini CLI).
+
+When `workflow-init` writes project copies into each selected harness's agents directory, it inserts that harness's `tools:` allowlist only when the `tools:` key is absent (keeping any existing `tools:` key as is). Project copies enforce the reviewer's read-only boundary at runtime in harnesses that enforce per-agent allowlists (`claude`, `gemini-cli`, Antigravity IDE). For `claude`, keep the comma-separated form so 0.2.0 projects produce no diff on re-run; use YAML arrays only where the harness requires them (`antigravity`, `gemini-cli`). Whenever the reviewer runs without a runtime allowlist (`agy` with `EnableWriteTools: true`, or the bundled fallback in any harness), `orchestrate` checks both `git rev-parse HEAD` and `git status --porcelain` before and after each review round.
 
 ### `claude` (`.claude/agents/`)
 - `implementer`:
   ```yaml
-  tools:
-    - Read
-    - Grep
-    - Glob
-    - Bash
-    - Write
-    - Edit
+  tools: Read, Grep, Glob, Bash, Write, Edit
   ```
 - `reviewer`:
   ```yaml
-  tools:
-    - Read
-    - Grep
-    - Glob
-    - Bash
+  tools: Read, Grep, Glob, Bash
   ```
 
 ### `antigravity` (`.agents/agents/`)
-Includes both CLI (`read_file`, `write_file`, `edit_file`) and IDE (`view_file`, `write_to_file`, `replace_file_content`, `multi_replace_file_content`) built-in names so the same project files work on both surfaces.
+Includes both CLI (`read_file`, `write_file`, `edit_file` — observed on `agy 1.5.16`) and IDE (`view_file`, `write_to_file`, `replace_file_content`, `multi_replace_file_content`) built-in names so the same project files work on both surfaces. On `agy 1.5.16`, `agy plugin validate --strict` accepts `model:` tiers `inherit`, `pro`, `flash`, and `flash_lite` (and rejects `flash-lite`).
 - `implementer`:
   ```yaml
   subagent: true
@@ -71,7 +63,7 @@ Includes both CLI (`read_file`, `write_file`, `edit_file`) and IDE (`view_file`,
     - manage_task
   ```
 
-> **Antigravity CLI (`agy`) subagent permissions:** Plugin-bundled agents (`agents/*.md`) spawned directly via `invoke_subagent` run in a read-only sandbox without `write_file`, `edit_file` or `run_command` — which blocks both the implementer (cannot edit/commit) and the reviewer (cannot run `scripts/gate.sh`). In Antigravity CLI, the orchestrator reads the project's `.agents/agents/implementer.md` and `.agents/agents/reviewer.md`, registers them for the session with `define_subagent(..., EnableWriteTools: true)` (using their markdown body as `SystemPrompt`), and spawns them with `invoke_subagent`. Because `EnableWriteTools: true` grants shell and file tools together, the orchestrator checks `git status --porcelain` before and after each review round to verify the reviewer left the worktree untouched.
+> **Antigravity CLI (`agy`) subagent permissions (observed on `agy 1.5.16`):** Plugin-bundled agents (`agents/*.md`) spawned directly via `invoke_subagent` run in a read-only sandbox without `write_file`, `edit_file` or `run_command` — which blocks both the implementer (cannot edit/commit) and the reviewer (cannot run `scripts/gate.sh`). In Antigravity CLI, the orchestrator reads the project's `.agents/agents/implementer.md` and `.agents/agents/reviewer.md`, registers them for the session with `define_subagent(..., EnableWriteTools: true)` (using their markdown body as `SystemPrompt`), and spawns them with `invoke_subagent` (which returns a `conversationId`). Because `EnableWriteTools: true` grants shell and file tools together (and the same gap exists when the bundled fallback runs in any harness), the orchestrator records both `git -C <worktree> rev-parse HEAD` and `git -C <worktree> status --porcelain` before and after each review round to verify the reviewer left the worktree and commit history untouched.
 
 ### `gemini-cli` (`.gemini/agents/`)
 Gemini CLI validates every entry in `tools:` against its built-in tool registry (`ALL_BUILTIN_TOOL_NAMES`). Use only exact Gemini CLI names:
@@ -113,10 +105,11 @@ A team can list several harnesses in `harnesses` (e.g. `claude, antigravity`). `
 
 When `agent_model` differs across harnesses (for example, `sonnet` on Claude and `pro` on Antigravity), record per-harness values in `agent_model` as `claude: sonnet; antigravity: pro` (otherwise a single value such as `inherit` applies to all).
 
-## Windows shell notes (`antigravity` and `gemini-cli`)
+To keep reviewer copies from drifting across harnesses, `orchestrate` appends new "Known false positives" entries (after `<!-- agent-workflow-kit:end -->`) to every listed harness's reviewer copy, and `workflow-init` syncs those entries across copies when adding or updating harnesses.
 
-Claude Code runs commands inside Git Bash on Windows, so `sh` and `&&` are always available. Antigravity and Gemini CLI on Windows default to PowerShell (often Windows PowerShell 5.1):
+## Windows shell notes (PowerShell)
+
+On Windows, Antigravity and Gemini CLI default to PowerShell (often Windows PowerShell 5.1). Claude Code uses Git Bash when Git for Windows is installed, also has a PowerShell tool, and uses only PowerShell when Git for Windows is absent. Whenever the active shell is PowerShell:
 - `&&` is not valid in PowerShell 5.1: use `Set-Location <worktree>; ...` (or `git -C <worktree>`) instead of `cd <worktree> && ...`.
-- `sh` may not be on `PATH` even when Git for Windows is installed: locate it from `git` (e.g. `"$(Split-Path (Split-Path (Get-Command git).Source))\bin\sh.exe" scripts/gate.sh`) or run under Git Bash.
+- `sh` may not be on `PATH` even when Git for Windows is installed: locate it from `git` (e.g. `"$(Split-Path (Split-Path (Get-Command git).Source))\bin\sh.exe" scripts/gate.sh`) or run under Git Bash, and pass the resolved `sh.exe` path in every subagent brief.
 - Windows PowerShell's default `Restricted` execution policy blocks `*.ps1` shims (such as `npm.ps1`): call `npm.cmd` directly or run commands via Git's `sh.exe`.
-
