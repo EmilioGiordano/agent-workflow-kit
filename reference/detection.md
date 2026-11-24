@@ -28,7 +28,7 @@ For each rule below, compare the project's value with the kit default. Each diff
 | Build output dir | `.build-slot` per worktree | `.cargo/config.toml` `target-dir`, "never override CARGO_TARGET_DIR" |
 | PR tooling | `gh pr create` | `scripts/pr/*`, Makefile targets |
 | Agent model | inherit | existing agents' `model:`, AGENTS.md |
-| Agent names | `implementer`, `reviewer` | unmarked `implementer.md` / `reviewer.md` in a harness's agents dir (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`) |
+| Agent names | `implementer`, `reviewer` | unmarked `implementer.md` / `reviewer.md` in any selected harness's agents dir (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`) — a collision in any one renames the kit agents in all of them |
 | Editing AGENTS.md / CLAUDE.md / GEMINI.md | append a marked block | "never change AGENTS.md unless asked" |
 | Worktree location | detected | AGENTS.md, `git worktree list` |
 
@@ -37,7 +37,7 @@ Default answer for every row: **project wins**. Show the table, then ask once. P
 ## Harnesses
 See `harnesses.md`. Detect which agent runtimes the project uses:
 - always include the currently running harness (`claude`, `antigravity` or `gemini-cli`);
-- also include any harness whose config already exists in the repo: `.claude/` or `CLAUDE.md` (`claude`), `.agents/` (`antigravity`), `.gemini/` or `GEMINI.md` (`gemini-cli`).
+- also include any harness whose config already exists in the repo: `.claude/` or `CLAUDE.md` (`claude`), `.agents/agents/` or `.agents/rules/` (`antigravity` — not bare `.agents/`, since Codex and Gemini CLI also read `.agents/skills`), `.gemini/` or `GEMINI.md` (`gemini-cli`).
 
 Confirm the list with the user; `workflow-init` installs marked project agents for every listed harness.
 

@@ -24,7 +24,7 @@ Kit files (read them from `<kit-root>`; do not copy this skill's text):
 ## Ownership rules
 - Markdown the kit owns sits between `<!-- agent-workflow-kit:begin -->` and `<!-- agent-workflow-kit:end -->`. Re-runs replace only that block, generated from the parameters table.
 - A Markdown file without the markers (e.g. an existing AGENTS.md): append a new marked block at the end, only after showing the block and getting an OK. Never edit text outside the markers.
-- Any other file without the kit marker is never overwritten. An unmarked `implementer.md` or `reviewer.md` in a harness's agents directory (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`) means the kit agents are installed as `kit-implementer.md` / `kit-reviewer.md`, with the frontmatter `name:` changed to match.
+- Any other file without the kit marker is never overwritten. If an unmarked `implementer.md` or `reviewer.md` exists in any selected harness's agents directory (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`), the kit agents are installed as `kit-implementer.md` / `kit-reviewer.md` across all selected harnesses, with the frontmatter `name:` changed to match, so the `agents` row describes every harness uniformly.
 - `scripts/gate.sh` carries `# agent-workflow-kit:managed`. Init refreshes the text outside `# agent-workflow-kit:steps:begin` / `:end`. The steps section is derived. On re-run:
   - re-derive it, applying the `gate_tuning` row and every existing `# dropped:` line and opt-in, so that only new detections show up;
   - show the diff against the current section, and replace the section only on OK.
@@ -35,7 +35,7 @@ Kit files (read them from `<kit-root>`; do not copy this skill's text):
 
 ## 1. Check the repo
 - Must be the root of a git repository (`git rev-parse --show-toplevel`). If not, stop.
-- If AGENTS.md has the kit block, its parameters table holds the defaults for every question below. A re-run with unchanged answers must produce no diff.
+- If AGENTS.md has the kit block, its parameters table holds the defaults for every question below. If the table has no `harnesses` row (a 0.2.0 project), default `harnesses` to the active harness plus any harnesses detected in the repo. A re-run with unchanged answers must produce no diff.
 
 ## 2. Read the project's rules (required)
 Read every source listed under "Project rules" in `detection.md`. Note each rule with `file:line`.
@@ -43,7 +43,7 @@ Read every source listed under "Project rules" in `detection.md`. Note each rule
 ## 3. Detect
 Follow `detection.md` and `harnesses.md` for each item:
 - harnesses (the active harness plus any detected in the repo: `claude`, `antigravity`, `gemini-cli`);
-- profiles (a list, from `$ARGUMENTS` or the detect table below);
+- profiles (a list, from `$ARGUMENTS` (Claude Code; elsewhere, take the profiles from the user's message) or the detect table below);
 - default branch and commit format;
 - CI capability and remote;
 - the gate (CI steps first, then package scripts, then declared profile tools), opt-ins and dropped tools;
@@ -69,10 +69,10 @@ Several match: they all go in `profiles` (a hybrid). None match: list the profil
    - machine: cores and RAM (for the parallelism formula), slot dir and memory thresholds for compiled stacks;
    - commit format and language [detected];
    - attribution [none];
-   - agent model [the project's existing agents, else inherit];
+   - agent model [the project's existing agents, else inherit; for multiple harnesses with different models, use `harness: model; ...` e.g. `claude: sonnet; antigravity: pro`];
    - decisions log [ROADMAP.md if it has "Decisions taken on the way", else `docs/decisions.md`].
 3. Rules entry-point files (see `harnesses.md`):
-   - If `claude` is in `harnesses` and `CLAUDE.md` exists without importing `AGENTS.md`, offer to add `@AGENTS.md` to it (Claude Code loads `CLAUDE.md`, not `AGENTS.md`).
+   - If `claude` is in `harnesses` and `CLAUDE.md` exists without importing `AGENTS.md`, offer to add `@AGENTS.md` to it (when `CLAUDE.md` exists without importing `AGENTS.md`, it hides `AGENTS.md`).
    - If `gemini-cli` is in `harnesses` and `GEMINI.md` does not import `AGENTS.md`, offer to add `@AGENTS.md` to `GEMINI.md` (Gemini CLI loads `GEMINI.md` by default).
    - `antigravity` loads `AGENTS.md` natively; no import is needed.
 
@@ -88,10 +88,10 @@ Run the static steps of the derived gate (format, lint, types; no compile, no te
    - `<merge-policy>`: `merge-policy.md` filled from the table; drop the alternatives that do not apply;
    - drop the leading `<!-- ... -->` template comment of each inserted template.
 2. Agents (for each harness in `harnesses`, into its agents dir from `harnesses.md` — `.claude/agents/`, `.agents/agents/`, `.gemini/agents/` — with names per the ownership rules): copy the kit agents, then:
-   - insert that harness's `tools:` allowlist (and harness fields such as `subagent: true` or `kind: local`) from `harnesses.md` into the frontmatter;
+   - insert that harness's `tools:` allowlist (comma-separated for `claude`, YAML array where required) and harness fields (`subagent: true` or `kind: local`) from `harnesses.md` into the frontmatter only when those keys are absent; if a `tools:` key is already present in a project agent, keep it as is;
    - fill `## Project settings` inside the managed block from the table;
    - set `model:` in the frontmatter when the harness's `agent_model` is not `inherit`;
-   - on re-run, keep the project's frontmatter edits and everything after the end marker (project notes, the reviewer's "Known false positives").
+   - on re-run, keep the project's frontmatter edits and everything after the end marker (project notes, the reviewer's "Known false positives"), and sync "Known false positives" entries across all selected harnesses' reviewer copies so multi-harness repos do not drift.
 3. `scripts/gate.sh`: the head and foot of `scripts/gates/<first profile>.sh`, with the header set to `profiles=<list>`. The steps section holds:
    - one `# -- stack: <profile>` part per profile, from the derived steps;
    - each step only once, with a unique name (hybrids prefix the stack, e.g. `rust-test`, `ts-test`); no `# init:` comment lines;
