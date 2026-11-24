@@ -14,7 +14,7 @@ The kit provides only how the team works. Project-specific rules (domain, specs,
 | Path | What it is |
 |---|---|
 | `agents/implementer.md` | Subagent: works in its own worktree; small commits that each pass lint and fmt; no push, no trailers; fixed-format report |
-| `agents/reviewer.md` | Subagent, read-only: runs the gate, verifies the implementer's claims, gives PASS/FAIL with severity, `file:line`, failure scenario and fix |
+| `agents/reviewer.md` | Subagent (read-only by instruction; project copies add runtime tool allowlists where the harness supports them): runs the gate, verifies the implementer's claims, gives PASS/FAIL with severity, `file:line`, failure scenario and fix |
 | `skills/orchestrate/SKILL.md` | The full loop and the orchestrator's duties |
 | `skills/workflow-init/SKILL.md` | `workflow-init`: reads the project's rules, detects harnesses, stacks, branch, commit format and CI, resolves conflicts with you, writes the project files |
 | `profiles/*.md` | Per-stack parameters: parallelism, build serialization, isolation, gate commands, failure criteria, UI validation mode |
@@ -65,6 +65,8 @@ agy plugin install https://github.com/<owner>/agent-workflow-kit
 
 ### Gemini CLI
 
+> **Status:** Gemini CLI support has been checked statically against the Gemini CLI source and has not yet been tested end to end.
+
 From a local path or GitHub repository:
 
 ```sh
@@ -75,9 +77,12 @@ gemini extensions install https://github.com/<owner>/agent-workflow-kit
 
 ### Validate the manifests after any change
 
+Keep the `version` field in `.claude-plugin/plugin.json`, `.antigravity-plugin/plugin.json` and `gemini-extension.json` in lockstep on every release.
+
 ```sh
 claude plugin validate <path-to>/agent-workflow-kit
 agy plugin validate --strict <path-to>/agent-workflow-kit
+gemini extensions validate <path-to>/agent-workflow-kit
 ```
 
 ## Usage
@@ -142,6 +147,7 @@ The skill prefers the project copies written by init in the active harness's age
    sh -n scripts/gates/<name>.sh
    claude plugin validate .
    agy plugin validate --strict .
+   gemini extensions validate .
    ```
    To exercise a gate, use fake tools only, on a PATH where `command -v` resolves every tool to the fake (LESSONS L14). Then try it on a real project of that stack.
 

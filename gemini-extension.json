@@ -1,5 +1,5 @@
 {
   "name": "agent-workflow-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Bootstraps a multi-agent dev workflow: implementer and reviewer iterate to PASS, then the orchestrator merges the default branch, gates, opens the PR, waits for CI, validates the feature and merges. Respects the project's existing rules."
 }
