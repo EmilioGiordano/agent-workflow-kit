@@ -5,8 +5,10 @@ How init fills each workflow parameter from the project. Detect first. Ask only 
 ## Project rules (read before anything else)
 
 Read these when they exist:
-- `AGENTS.md`, `CLAUDE.md` (and any files they `@`-import), `CONTRIBUTING*`, `.github/PULL_REQUEST_TEMPLATE*`;
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` (and any files they `@`-import), `CONTRIBUTING*`, `.github/PULL_REQUEST_TEMPLATE*`;
 - `.claude/agents/*`, `.claude/skills/*`, `.claude/settings*.json`;
+- `.agents/agents/*`, `.agents/skills/*`, `.agents/rules/*`, `.agents/*.json`;
+- `.gemini/agents/*`, `.gemini/skills/*`, `.gemini/settings.json`;
 - `scripts/`, `Makefile`, `justfile`, the `package.json` / `composer.json` scripts;
 - git hooks (`git rev-parse --git-path hooks`; also `.husky/`, `lefthook.yml`, `.pre-commit-config.yaml`);
 - `commitlint.config.*`, `.commitlintrc*`;
@@ -20,17 +22,24 @@ For each rule below, compare the project's value with the kit default. Each diff
 | Commit granularity | one commit per file or aspect | CONTRIBUTING ("squash into logical units") |
 | Default branch | detected | AGENTS.md ("work on master"), remote HEAD |
 | Who merges | orchestrator | AGENTS.md (user approval, manual test, `staging/<date>` batches) |
-| Extra required reviews | none | AGENTS.md, CLAUDE.md, `.claude/skills` (e.g. a security review command) |
+| Extra required reviews | none | AGENTS.md, CLAUDE.md, GEMINI.md, `.claude/skills`, `.agents/skills`, `.gemini/skills` (e.g. a security review command) |
 | Review-round limit | none | AGENTS.md ("after 2 failed rounds, stop and ask") |
 | Branch checks | profile | AGENTS.md ("no workspace clippy on feature branches") |
 | Build output dir | `.build-slot` per worktree | `.cargo/config.toml` `target-dir`, "never override CARGO_TARGET_DIR" |
 | PR tooling | `gh pr create` | `scripts/pr/*`, Makefile targets |
 | Agent model | inherit | existing agents' `model:`, AGENTS.md |
-| Agent names | `implementer`, `reviewer` | unmarked `.claude/agents/implementer.md` / `reviewer.md` |
-| Editing AGENTS.md / CLAUDE.md | append a marked block | "never change AGENTS.md unless asked" |
+| Agent names | `implementer`, `reviewer` | unmarked `implementer.md` / `reviewer.md` in any selected harness's agents dir (`.claude/agents/`, `.agents/agents/`, `.gemini/agents/`) — a collision in any one renames the kit agents in all of them |
+| Editing AGENTS.md / CLAUDE.md / GEMINI.md | append a marked block | "never change AGENTS.md unless asked" |
 | Worktree location | detected | AGENTS.md, `git worktree list` |
 
 Default answer for every row: **project wins**. Show the table, then ask once. Per row, the user answers `project`, `kit` or `abort`. The project's value goes into the parameters table, and from there into the agents and the merge policy.
+
+## Harnesses
+See `harnesses.md`. Detect which agent runtimes the project uses:
+- always include the currently running harness (`claude`, `antigravity` or `gemini-cli`);
+- also include any harness whose config already exists in the repo: `.claude/` or `CLAUDE.md` (`claude`), `.agents/agents/` or `.agents/rules/` (`antigravity` — not bare `.agents/`, since Codex and Gemini CLI also read `.agents/skills`), `.gemini/` or `GEMINI.md` (`gemini-cli`).
+
+Confirm the list with the user; `workflow-init` installs marked project agents for every listed harness.
 
 ## Default branch
 1. `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`).

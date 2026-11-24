@@ -9,25 +9,29 @@ argument-hint: "[<type>/<topic> <goal> ...]"
 You are the orchestrator: you write TASKs, spawn and steer the agents, coordinate builds, and are the only one who pushes, opens PRs and (if allowed) merges.
 
 ## Load first
-- `AGENTS.md`: the project's own rules, and the "How we work" parameters table. Every `<name>` below is a value from that table (`<default-branch>` = `default_branch`, and so on). No table: tell the user to run `/agent-workflow-kit:workflow-init` and stop.
-- The profiles: `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>.md`, for each entry in `profiles`.
-- Validation modes: `${CLAUDE_PLUGIN_ROOT}/reference/validation-modes.md`.
-- Lessons: `${CLAUDE_PLUGIN_ROOT}/LESSONS.md` (entries for `orchestrator` and `all`).
-- Templates: `${CLAUDE_PLUGIN_ROOT}/templates/` (TASK.md, PR.md, REPORT.md).
+Resolve `<kit-root>` first: if `${CLAUDE_PLUGIN_ROOT}` was substituted into an absolute path when this skill loaded, use it; otherwise `<kit-root>` is `../..` relative to this `SKILL.md` file's directory. Never pass literal `$CLAUDE_PLUGIN_ROOT` to a shell command.
 
-These paths are substituted when the skill loads. The variable is not set in the Bash tool: copy the path as written here, never `$CLAUDE_PLUGIN_ROOT` in a shell command.
+- `AGENTS.md`: the project's own rules, and the "How we work" parameters table. Every `<name>` below is a value from that table (`<default-branch>` = `default_branch`, and so on). No table: tell the user to run `workflow-init` and stop.
+- Harnesses: `<kit-root>/reference/harnesses.md`.
+- The profiles: `<kit-root>/profiles/<profile>.md`, for each entry in `profiles`.
+- Validation modes: `<kit-root>/reference/validation-modes.md`.
+- Lessons: `<kit-root>/LESSONS.md` (entries for `orchestrator` and `all`).
+- Templates: `<kit-root>/templates/` (TASK.md, PR.md, REPORT.md).
 
 ## Agents
-- Use the names in the `agents` row. Without it, take the first that exists and contains `agent-workflow-kit:begin`:
-  1. `.claude/agents/implementer.md`;
-  2. `.claude/agents/kit-implementer.md`;
-  3. else `agent-workflow-kit:implementer`.
+- Use the names in the `agents` row, resolved in the active harness's agents directory from `harnesses.md` (`.claude/agents/`, `.agents/agents/`, or `.gemini/agents/`). Without the `agents` row, take the first that exists and contains `agent-workflow-kit:begin`:
+  1. `<agents-dir>/implementer.md`;
+  2. `<agents-dir>/kit-implementer.md`;
+  3. else the plugin's bundled agent (`agent-workflow-kit:implementer` in Claude Code, `implementer` in Antigravity and Gemini CLI).
   The same order applies to the reviewer. A project agent without the kit marker is not the kit's; never brief it as one.
-- Keep each agent's ID. Fix rounds go to the SAME implementer and re-reviews to the SAME reviewer through SendMessage, so they keep context. Spawn a fresh one only if the agent is gone; then pass the full history of findings.
+- Keep each agent's ID (`conversationId` in Antigravity, agent ID in Claude Code). Fix rounds go to the SAME implementer and re-reviews to the SAME reviewer through the harness's messaging tool (`SendMessage` in Claude Code, `send_message` in Antigravity), so they keep context. Spawn a fresh one only if the agent is gone or the harness does not support resuming subagents; then pass the full history of findings.
+- In Antigravity CLI (`agy`), plugin-bundled agents start without shell/write tools: read the project's `.agents/agents/<name>.md` files and register them for the session with `define_subagent(..., EnableWriteTools: true)` (see `harnesses.md`).
+- Whenever the reviewer runs without a runtime tool allowlist (`agy` with `EnableWriteTools: true`, or the plugin's bundled fallback in any harness — which is read-only by instruction only), record both `git -C <worktree> rev-parse HEAD` and `git -C <worktree> status --porcelain` before each review round and verify both are unchanged after.
 
 ## Brief checklist (the brief is the agent's only context)
-- Worktree path, branch, TASK path, and the lessons path (the substituted path above).
-- The shell's directory resets between calls: every command uses `cd <worktree> &&` or `git -C <worktree>`.
+- Worktree path, branch, TASK path, and the lessons path (the resolved `<kit-root>/LESSONS.md`).
+- The shell's directory resets between calls: every command uses `cd <worktree> &&` (or `Set-Location <worktree>;` on a PowerShell harness) or `git -C <worktree>`.
+- On a PowerShell harness: pass the resolved `sh.exe` path (see `harnesses.md`) so the agent can run `scripts/gate.sh`, and instruct it to use `Set-Location <worktree>;` instead of `&&`.
 - Rules it would otherwise break: `commit_format`, attribution, no push, build lock, no tool installs.
 - Facts already established, with `file:line`, and which ones to verify.
 - Out of scope, including other agents' worktrees.
@@ -50,7 +54,7 @@ These paths are substituted when the skill loads. The variable is not set in the
 2. Spawn the reviewer on the same worktree with the TASK path.
 3. Sanity-check findings before relaying them:
    - a finding that contradicts the spec or a settled decision: override it, record it as deliberate in REPORT.md and in the next brief;
-   - a finding that is wrong: add it to the reviewer's "Known false positives" (outside the managed block).
+   - a finding that is wrong: add it to "Known false positives" (outside the managed block) in every reviewer copy listed in `harnesses`, so multi-harness copies stay in sync.
 4. On FAIL: send the findings to the same implementer; send its fix commits, with each finding's resolution, to the same reviewer. Repeat until PASS, or until `review_round_limit` failed rounds; then stop that branch and ask the user. When the reviewer says `design`, redesign before patching again.
 5. Medium and Low findings are fixed or recorded as deliberate before the PR. Any commit after a PASS needs a new PASS.
 6. Run each `extra_reviews` entry the project requires, and treat its blocking findings like the reviewer's.
@@ -68,6 +72,7 @@ These paths are substituted when the skill loads. The variable is not set in the
    git -C <worktree> merge --no-ff origin/<default-branch>
    cd <worktree> && sh scripts/gate.sh
    ```
+   On a PowerShell harness, run `Set-Location <worktree>; & "<resolved-sh.exe>" scripts/gate.sh` instead of `cd <worktree> && sh scripts/gate.sh` (see `harnesses.md`).
    If the merge needed a conflict resolution, get a new PASS on it.
 2. Push to `remote` and open the PR as a draft, with the body from the PR template (or the project's PR template). The title follows `commit_format`.
    ```sh

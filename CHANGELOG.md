@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.0
+
+Multi-harness support for Google Antigravity (`agy` / IDE / App) and Gemini CLI alongside Claude Code, keeping a single source of truth for skills, profiles, gates, templates and lessons.
+
+### Multi-harness support
+- Added `.antigravity-plugin/plugin.json` and `gemini-extension.json` alongside `.claude-plugin/plugin.json`; all three manifests move in lockstep.
+- Moved `commands/workflow-init.md` to `skills/workflow-init/SKILL.md` so all three harnesses discover both skills cleanly without failing Antigravity strict validation.
+- Added `reference/harnesses.md` mapping manifests, rules files, project agents dirs, per-harness `tools:` allowlists, follow-up messaging, `agent_model` values, `<kit-root>` resolution, and Windows PowerShell notes.
+- Added the `harnesses` parameter to `AGENTS.md` and per-harness `agent_model` syntax (`claude: sonnet; antigravity: pro`).
+- Skills resolve `<kit-root>` from `${CLAUDE_PLUGIN_ROOT}` when substituted, otherwise `../..` relative to `SKILL.md`, and pass `<kit-root>/LESSONS.md` in agent briefs.
+- A name collision (`implementer.md` / `reviewer.md` without the kit marker) in any selected harness renames the kit agents to `kit-implementer` / `kit-reviewer` across all selected harnesses.
+- `orchestrate` and `workflow-init` keep the reviewer's "Known false positives" section in sync across all reviewer copies in multi-harness repos.
+- Gemini CLI support is checked statically against the Gemini CLI source and is marked experimental until tested end to end.
+
+### Read-only boundary and PowerShell harnesses
+- Bundled `agents/implementer.md` and `agents/reviewer.md` omit `tools:` so every harness parses them without tool-name errors. Bundled agents are read-only by instruction only; project copies carry runtime tool allowlists where the harness supports them.
+- Whenever the reviewer runs without a runtime tool allowlist (`agy` with `EnableWriteTools: true`, or the bundled fallback in any harness), `orchestrate` records both `git rev-parse HEAD` and `git status --porcelain` before each review round and checks both after.
+- Updated `orchestrate`, briefs and bundled agents to support PowerShell harnesses (`Set-Location <worktree>;` instead of `&&`, and passing the resolved `sh.exe` path in briefs).
+
+### Upgrading from 0.2.0
+- An existing `AGENTS.md` without a `harnesses` row defaults to the active harness plus any harnesses detected in the repo.
+- Existing project agents that already have a `tools:` key keep it as is; `workflow-init` inserts the allowlist only when `tools:` is absent.
+- For `claude`, `tools:` keeps the comma-separated form (`tools: Read, Grep, Glob, Bash`), so an unchanged re-run produces no diff on 0.2.0 projects. YAML arrays are used only where the harness requires them (`antigravity`, `gemini-cli`).
+- `workflow-init` moved from `commands/workflow-init.md` to `skills/workflow-init/SKILL.md` (still invoked as `/agent-workflow-kit:workflow-init` in Claude Code).
+
 ## 0.2.0
 
 Fixes from trial runs of `/workflow-init` on four real projects: a Laravel API with no CI, a Rust workspace with a mature workflow of its own, a Node MCP stdio server using Biome, and a Tauri hybrid using commitlint on `master`.
