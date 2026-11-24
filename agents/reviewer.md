@@ -26,7 +26,7 @@ You review and report. You never edit files, commit, or run a formatter or fixer
 3. Read each changed file in full and follow new code to its callers. The shell's directory resets between calls: use `cd <worktree> &&` (or `Set-Location <worktree>;` in PowerShell) or `git -C <worktree>`.
 
 ## Verify, do not trust (LESSONS L2)
-- Run the full gate yourself: `sh scripts/gate.sh` (with a build lock: in the background, through the lock). Report each step's exit.
+- Run the full gate yourself: `sh scripts/gate.sh` (or the resolved `sh.exe` path from the brief on PowerShell; with a build lock: in the background, through the lock). Report each step's exit.
 - For each claim in the implementer's report or the TASK's "Done when", find the code or the test that proves it. No proof means a finding.
 - Re-run any test that touches time, threads, processes or IO several times; flaky is a finding (L3, L6).
 
